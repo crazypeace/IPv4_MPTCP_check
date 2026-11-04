@@ -19,14 +19,3 @@ ss -lnMp 2>&1
 echo
 echo "== 全部 TCP 监听 =="
 ss -lntp 2>&1 | head -n 40
-if [ "${1:-}" = "mitigate" ]; then
-  echo
-  echo "== 缓解: 全机关闭 MPTCP (只挡新 socket, 已开的监听须重启服务才消失) =="
-  sysctl -w net.mptcp.enabled=0
-  echo 'net.mptcp.enabled = 0' > /etc/sysctl.d/90-cve-2026-98432.conf
-  echo "已持久化 /etc/sysctl.d/90-cve-2026-98432.conf"
-  echo "下一步: 重启所有 Go 服务 (caddy/xray/sing-box/v2ray...), 再跑一次本脚本确认 ss -lnMp 为空"
-  echo "注意: 这只是缓解, 不是修复 — 底层 UAF 在普通 TCP 上同样存在, 最终必须换已修内核并重启"
-  echo "更强的临时封堵 (丢弃所有带 IPv4 头选项的 TCP 包, Red Hat RHSB-2026-016):"
-  echo "  nft add table inet cve_2026_98432 '{ chain input { type filter hook input priority -310; policy accept; ip protocol tcp ip hdrlength > 5 counter drop } }'"
-fi
